@@ -1,0 +1,8 @@
+/dens/*
+/input/*
+/misc/*
+/norm/*
+/rdata/*
+/web/*
+fn_query_*
+fn_write_*
