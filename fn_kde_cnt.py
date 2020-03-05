@@ -5,11 +5,12 @@ import pandas as pd
 import geopandas as gpd
 import numpy as np
 import sys
+import shapely.wkt
 
 #classes, method
+from osgeo import ogr
 from sklearn.cluster import dbscan
-from shapely.geometry import Point,Polygon,MultiPolygon
-from fiona.crs import from_epsg
+from shapely.geometry import Point,Polygon
 
 #capture stderr
 sys.stderr = object
@@ -74,7 +75,7 @@ def to_concave_polygons(df,lvl,grid):
         #select
         contourset = gpd.GeoSeries([Polygon(contour) for contour in contourpnt if len(contour) >= 10])
         contourset = gpd.GeoDataFrame({'geometry': contourset})
-        contourset.crs = from_epsg(27700)
+        contourset.crs = 'epsg:27700'
 
         #pretty
         contourset['geometry'] = contourset.geometry.buffer(10000,join_style=1).buffer(-10000,join_style=1)
@@ -94,7 +95,8 @@ input = pd.read_csv(sys.stdin,sep=';',names=['surname','year','freq','bw','idx',
 #read from disk
 gridc = pd.read_csv('data/xy.csv').sort_values(by='gid')
 gbshp = gpd.read_file('data/gb.shp')
-gbshp.crs = from_epsg(27700)
+gbshp.crs = 'epsg:27700'
+gbwkt = ogr.CreateGeometryFromWkt(str(gbshp['geometry'][0]))
 
 #kde df
 idx = [int(x) for x in str(input['idx'].to_numpy())[2:-2].split(',')]
@@ -137,17 +139,25 @@ try:
 
     #harmonise
     comb2.drop_duplicates(subset=['idx','level'],inplace=True,keep='first')
+    comb2.reset_index(inplace=True)
+    kdeshp = comb2.reset_index()
 
-    #gb clip
-    kdeshp = gpd.overlay(comb2,gbshp,how='intersection')
+    #gb intersect through osgeos
+    for index,row in kdeshp.iterrows():
+        cnwkt = ogr.CreateGeometryFromWkt(str(row['geometry']))
+        kdeshp.at[index,'intersect'] = cnwkt.Intersection(gbwkt).ExportToWkt()
 
-    #re-project
-    kdeshp['geometry'] = kdeshp['geometry'].to_crs(epsg=4326)
-    kdeshp.drop(kdeshp.columns[[1,2]],axis=1,inplace=True)
+    #cleanup, re-project
+    kdeshp['geometry'] = kdeshp['intersect'].map(shapely.wkt.loads)
+    kdeshp.drop(kdeshp.columns[[0,1,3,5]],axis=1,inplace=True)
+    kdeshp.crs = 'epsg:27700'
+    kdeshp['geometry'] = kdeshp['geometry'].to_crs('epsg:27700')
 
     #output
     kdejson = str(kdeshp.to_json())
     print(input.iloc[0]['surname']+';'+str(input.iloc[0]['year'])+';'+str(input.iloc[0]['freq'])+';'+str(input.iloc[0]['bw'])+';'+kdejson)
 
 except:
+
+    output
     print(input.iloc[0]['surname']+';'+str(input.iloc[0]['year'])+';'+str(input.iloc[0]['freq'])+';'+str(input.iloc[0]['bw'])+';NULL')

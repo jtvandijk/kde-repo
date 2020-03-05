@@ -10,6 +10,7 @@ suppressMessages(library(sparr))
 suppressMessages(library(raster))
 
 #parameters
+options(warn=-1)
 #year <- as.numeric(commandArgs(trailingOnly=TRUE)[1])
 year <- 2016
 
