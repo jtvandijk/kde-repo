@@ -7,3 +7,4 @@
 /web/*
 fn_query_*
 fn_write_*
+*.pyc

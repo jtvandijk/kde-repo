@@ -4,52 +4,30 @@
 import pandas as pd
 import geopandas as gpd
 import numpy as np
-import sys
 import shapely.wkt
 
 #classes, method
 from osgeo import ogr
+from hull.concavehull import ConcaveHull
 from sklearn.cluster import dbscan
-from shapely.geometry import Point,Polygon
+from shapely.geometry import Polygon
 
 #capture stderr
-sys.stderr = object
-
-#coordinate lookup
-def create_lookup(coord):
-    record = dict()
-    sorted_data = sorted(coord)
-    for x,y in sorted_data:
-        if x in record.keys():
-            record[x][y] = None
-        else:
-            record[x] = dict()
-            record[x][y] = None
-    return record
+#sys.stderr = object
 
 #concave points
 def to_concave_points(df,coord):
     groups = np.unique(df['group'].tolist())
     contours = []
     for g in groups:
-        boundary = []
         gdf = df.loc[df['group'] == g]
-        X = np.unique(gdf['x'].tolist())
-        coordx = [[int(x[0]),int(x[1])] for x in (list(zip(gdf.x,gdf.y)))]
-        Xlook = create_lookup(coord=coordx)
-        for x in X:
-            if x in Xlook.keys():
-                min_y = min(Xlook[x].keys())
-                max_y = max(Xlook[x].keys())
-                if not min_y == max_y:
-                    boundary.append((int(x),min_y))
-        for x in np.flipud(X):
-            if x in Xlook.keys():
-                max_y = max(Xlook[x].keys())
-                min_y = min(Xlook[x].keys())
-                if not max_y == min_y:
-                    boundary.append((int(x),max_y))
-        contours.append(boundary)
+        coords = [[int(x[0]),int(x[1])] for x in (list(zip(gdf.x,gdf.y)))]
+        concave = ConcaveHull(coords)
+        concave_array = concave.calculate()
+        if not concave_array is None:
+            contours.append(concave_array)
+
+    #return contours list
     return contours
 
 #concave polygons
@@ -90,7 +68,7 @@ def to_concave_polygons(df,lvl,grid):
         return(val)
 
 #read from stdin
-input = pd.read_csv(sys.stdin,sep=';',names=['surname','year','freq','bw','idx','kde'])
+input = pd.read_csv('test_vandijk',sep=';',names=['surname','year','freq','bw','idx','kde'])
 
 #read from disk
 gridc = pd.read_csv('data/xy.csv').sort_values(by='gid')
@@ -135,29 +113,31 @@ comb1 = mrg1.append(mrg2)
 comb2 = comb1.append(lvl3)
 
 #output
-try:
+#try:
 
-    #harmonise
-    comb2.drop_duplicates(subset=['idx','level'],inplace=True,keep='first')
-    comb2.reset_index(inplace=True)
-    kdeshp = comb2.reset_index()
+#harmonise
+comb2.drop_duplicates(subset=['idx','level'],inplace=True,keep='first')
+comb2.reset_index(inplace=True)
+kdeshp = comb2.reset_index()
 
-    #gb intersect through osgeos
-    for index,row in kdeshp.iterrows():
-        cnwkt = ogr.CreateGeometryFromWkt(str(row['geometry']))
-        kdeshp.at[index,'intersect'] = cnwkt.Intersection(gbwkt).ExportToWkt()
+#gb intersect through osgeos
+for index,row in kdeshp.iterrows():
+    cnwkt = ogr.CreateGeometryFromWkt(str(row['geometry']))
+    kdeshp.at[index,'intersect'] = cnwkt.Intersection(gbwkt).ExportToWkt()
 
-    #cleanup, re-project
-    kdeshp['geometry'] = kdeshp['intersect'].map(shapely.wkt.loads)
-    kdeshp.drop(kdeshp.columns[[0,1,3,5]],axis=1,inplace=True)
-    kdeshp.crs = 'epsg:27700'
-    kdeshp['geometry'] = kdeshp['geometry'].to_crs('epsg:27700')
+#cleanup, re-project
+kdeshp['geometry'] = kdeshp['intersect'].map(shapely.wkt.loads)
+kdeshp.drop(kdeshp.columns[[0,1,3,5]],axis=1,inplace=True)
+kdeshp.crs = 'epsg:27700'
+kdeshp.to_file('comb.shp')
+kdeshp.to_crs('epsg:4326')
+kdeshp.to_file('prj.shp')
 
-    #output
-    kdejson = str(kdeshp.to_json())
-    print(input.iloc[0]['surname']+';'+str(input.iloc[0]['year'])+';'+str(input.iloc[0]['freq'])+';'+str(input.iloc[0]['bw'])+';'+kdejson)
+#output
+kdejson = str(kdeshp.to_json())
+print(input.iloc[0]['surname']+';'+str(input.iloc[0]['year'])+';'+str(input.iloc[0]['freq'])+';'+str(input.iloc[0]['bw'])+';'+kdejson)
 
-except:
-
-    output
-    print(input.iloc[0]['surname']+';'+str(input.iloc[0]['year'])+';'+str(input.iloc[0]['freq'])+';'+str(input.iloc[0]['bw'])+';NULL')
+#except:
+#
+#    #output
+#    print(input.iloc[0]['surname']+';'+str(input.iloc[0]['year'])+';'+str(input.iloc[0]['freq'])+';'+str(input.iloc[0]['bw'])+';NULL')
