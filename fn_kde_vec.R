@@ -11,16 +11,14 @@ suppressMessages(library(raster))
 
 #parameters
 options(warn=-1)
-#year <- as.numeric(commandArgs(trailingOnly=TRUE)[1])
-year <- 2016
+year <- as.numeric(commandArgs(trailingOnly=TRUE)[1])
 
 #-------------------------------------------------------------------------------
 # read from stdin
 #-------------------------------------------------------------------------------
 
 #surname data
-#pop.sur  <- na.omit(fread('file:///dev/stdin',col.names=c('surname','id','x','y')))
-pop.sur  <- na.omit(fread('input/data_smith',col.names=c('surname','id','x','y')))
+pop.sur  <- na.omit(fread('file:///dev/stdin',col.names=c('surname','id','x','y')))
 agg.sur <- pop.sur[,.(n=.N),by=.(id,x,y)]
 name.sur <- pop.sur$surname[1]
 
