@@ -20,7 +20,7 @@ year <- 2016
 
 #surname data
 #pop.sur  <- na.omit(fread('file:///dev/stdin',col.names=c('surname','id','x','y')))
-pop.sur <- na.omit(fread('input/data_vandijk',col.names=c('surname','id','x','y')))
+pop.sur  <- na.omit(fread('input/data_smith',col.names=c('surname','id','x','y')))
 agg.sur <- pop.sur[,.(n=.N),by=.(id,x,y)]
 name.sur <- pop.sur$surname[1]
 

@@ -1,5 +1,5 @@
 #! /bin/bash
-source activate png
+source activate kde
 
 #consistent parish
 if [ "$2" -lt "1901" ];then par="conpar1851"; else par="conpar1901"; fi

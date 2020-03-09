@@ -14,7 +14,7 @@ from sklearn.cluster import dbscan
 from shapely.geometry import Polygon
 
 #capture stderr
-#sys.stderr = object
+sys.stderr = object
 
 #concave points
 def to_concave_points(df,coord):
@@ -69,7 +69,7 @@ def to_concave_polygons(df,lvl,grid):
         return(val)
 
 #read from stdin
-input = pd.read_csv('test_vandijk',sep=';',names=['surname','year','freq','bw','idx','kde'])
+input = pd.read_csv(sys.stdin,sep=';',names=['surname','year','freq','bw','idx','kde'])
 
 #read from disk
 gridc = pd.read_csv('data/xy.csv').sort_values(by='gid')
@@ -128,9 +128,8 @@ try:
 
     #cleanup
     kdeshp['geometry'] = kdeshp['intersect'].map(shapely.wkt.loads)
-    kdeshp.drop(kdeshp.columns[[0,1,3,5]],axis=1,inplace=True)
+    kdeshp.drop(kdeshp.columns[[0,1,4,5]],axis=1,inplace=True)
     kdeshp.crs = 'epsg:27700'
-    kdeshp.to_file('comb.shp')
 
     #reproject
     kdeprj = kdeshp.to_crs('epsg:4326')

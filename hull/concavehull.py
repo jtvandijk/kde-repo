@@ -1,6 +1,7 @@
 #JTVD - 2020
 
 #based on: https://github.com/joaofig/uk-accidents/blob/master/geomath/hulls.py
+#implementation on KDE 1000x1000 grid -- so distance search can be on subset (major speed improvement)
 
 #import libraries
 import numpy as np
@@ -16,53 +17,76 @@ class ConcaveHull(object):
         #data
         self.data_set = np.array(points)
 
-        #index
+        #index and knn settings
         self.indices = np.ones(self.data_set.shape[0],dtype=bool)
-        self.prime_k = np.array([4,5,6,7,8])
+        self.prime_k = np.array([6,7,8])
         self.prime_ix = prime_ix
 
     def get_next_k(self):
+
+        #next value for knn parameters
         if self.prime_ix < len(self.prime_k):
             return self.prime_k[self.prime_ix]
         else:
             return -1
 
     def distance(self, loc_ini, loc_end):
+
+        #euclidean distance array one-to-many (projected data)
         rep = np.array([loc_ini,]*loc_end.shape[0])
         dst = list(map(distance.euclidean,rep,loc_end))
         return(dst)
 
     @staticmethod
     def get_lowest_y_index(points):
+
+        #identify start xy
         indices = np.argsort(points[:,1])
         return indices[0]
 
     def get_k_nearest(self, ix, k):
+
+        #organise from, to
         ixs = self.indices
         base_indices = np.arange(len(ixs))[ixs]
-        distances = self.distance(self.data_set[ix, :], self.data_set[ixs, :])
+
+        #calculate distances for subset only
+        data_sub = self.data_set[ixs,:]
+        data_sub = data_sub[(data_sub[:,0] <= self.data_set[ix,0] + 2000) & \
+                            (data_sub[:,0] >= self.data_set[ix,0] - 2000) & \
+                            (data_sub[:,1] <= self.data_set[ix,1] + 2000) & \
+                            (data_sub[:,1] >= self.data_set[ix,1] - 2000)]
+        distances = self.distance(self.data_set[ix, :], data_sub)
         sorted_indices = np.argsort(distances)
         kk = min(k, len(sorted_indices))
         k_nearest = sorted_indices[range(kk)]
-        return base_indices[k_nearest]
+
+        #back to full data
+        data_knn = data_sub[k_nearest]
+        knp = np.array([np.where(np.all(kn==self.data_set[ixs,:],axis=1))[0][0] for kn in data_knn])
+        return base_indices[knp]
 
     def calculate_headings(self, ix, ixs, ref_heading=0.0):
-        r_ix = self.data_set[ix, :]
-        r_ixs = self.data_set[ixs, :]
+
+        #organise fromm, to
+        r_ix = self.data_set[ix,:]
+        r_ixs = self.data_set[ixs,:]
         y = r_ixs[:, 0] - r_ix[0]
         x = r_ixs[:, 1] - r_ix[1]
+
+        #bearings
         bearings = (np.degrees(np.arctan2(y, x)) + 360.0) % 360.0 - ref_heading
         bearings[bearings < 0.0] += 360.0
         return bearings
 
     def recurse_calculate(self):
-        recurse = ConcaveHull(self.data_set, self.prime_ix + 1)
+        recurse = ConcaveHull(self.data_set,self.prime_ix + 1)
         next_k = recurse.get_next_k()
         if next_k == -1:
             return None
         return recurse.calculate(next_k)
 
-    def calculate(self, k=3):
+    def calculate(self, k=5):
 
         #check validity of input
         if self.data_set.shape[0] < 3:
