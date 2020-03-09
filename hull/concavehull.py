@@ -29,7 +29,7 @@ class ConcaveHull(object):
 
     def distance(self, loc_ini, loc_end):
         rep = np.array([loc_ini,]*loc_end.shape[0])
-        dst = map(distance.euclidean,rep,loc_end)
+        dst = list(map(distance.euclidean,rep,loc_end))
         return(dst)
 
     @staticmethod
@@ -63,7 +63,7 @@ class ConcaveHull(object):
         return recurse.calculate(next_k)
 
     def calculate(self, k=3):
-                
+
         #check validity of input
         if self.data_set.shape[0] < 3:
             return None

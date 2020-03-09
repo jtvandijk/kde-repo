@@ -5,6 +5,7 @@ import pandas as pd
 import geopandas as gpd
 import numpy as np
 import shapely.wkt
+import sys
 
 #classes, method
 from osgeo import ogr
@@ -113,31 +114,32 @@ comb1 = mrg1.append(mrg2)
 comb2 = comb1.append(lvl3)
 
 #output
-#try:
+try:
 
-#harmonise
-comb2.drop_duplicates(subset=['idx','level'],inplace=True,keep='first')
-comb2.reset_index(inplace=True)
-kdeshp = comb2.reset_index()
+    #harmonise
+    comb2.drop_duplicates(subset=['idx','level'],inplace=True,keep='first')
+    comb2.reset_index(inplace=True)
+    kdeshp = comb2.reset_index()
 
-#gb intersect through osgeos
-for index,row in kdeshp.iterrows():
-    cnwkt = ogr.CreateGeometryFromWkt(str(row['geometry']))
-    kdeshp.at[index,'intersect'] = cnwkt.Intersection(gbwkt).ExportToWkt()
+    #gb intersect through osgeos
+    for index,row in kdeshp.iterrows():
+        cnwkt = ogr.CreateGeometryFromWkt(str(row['geometry']))
+        kdeshp.at[index,'intersect'] = cnwkt.Intersection(gbwkt).ExportToWkt()
 
-#cleanup, re-project
-kdeshp['geometry'] = kdeshp['intersect'].map(shapely.wkt.loads)
-kdeshp.drop(kdeshp.columns[[0,1,3,5]],axis=1,inplace=True)
-kdeshp.crs = 'epsg:27700'
-kdeshp.to_file('comb.shp')
-kdeshp.to_crs('epsg:4326')
-kdeshp.to_file('prj.shp')
+    #cleanup
+    kdeshp['geometry'] = kdeshp['intersect'].map(shapely.wkt.loads)
+    kdeshp.drop(kdeshp.columns[[0,1,3,5]],axis=1,inplace=True)
+    kdeshp.crs = 'epsg:27700'
+    kdeshp.to_file('comb.shp')
 
-#output
-kdejson = str(kdeshp.to_json())
-print(input.iloc[0]['surname']+';'+str(input.iloc[0]['year'])+';'+str(input.iloc[0]['freq'])+';'+str(input.iloc[0]['bw'])+';'+kdejson)
+    #reproject
+    kdeprj = kdeshp.to_crs('epsg:4326')
 
-#except:
-#
-#    #output
-#    print(input.iloc[0]['surname']+';'+str(input.iloc[0]['year'])+';'+str(input.iloc[0]['freq'])+';'+str(input.iloc[0]['bw'])+';NULL')
+    #output
+    kdejson = str(kdeprj.to_json())
+    print(input.iloc[0]['surname']+';'+str(input.iloc[0]['year'])+';'+str(input.iloc[0]['freq'])+';'+str(input.iloc[0]['bw'])+';'+kdejson)
+
+except:
+
+   #output
+   print(input.iloc[0]['surname']+';'+str(input.iloc[0]['year'])+';'+str(input.iloc[0]['freq'])+';'+str(input.iloc[0]['bw'])+';NULL')
