@@ -50,21 +50,30 @@ class ConcaveHull(object):
         ixs = self.indices
         base_indices = np.arange(len(ixs))[ixs]
 
-        #calculate distances for subset only
-        data_sub = self.data_set[ixs,:]
-        data_sub = data_sub[(data_sub[:,0] <= self.data_set[ix,0] + 2000) & \
-                            (data_sub[:,0] >= self.data_set[ix,0] - 2000) & \
-                            (data_sub[:,1] <= self.data_set[ix,1] + 2000) & \
-                            (data_sub[:,1] >= self.data_set[ix,1] - 2000)]
-        distances = self.distance(self.data_set[ix, :], data_sub)
-        sorted_indices = np.argsort(distances)
-        kk = min(k, len(sorted_indices))
-        k_nearest = sorted_indices[range(kk)]
+        #calculate distances for subset only // points in range
+        try:
+            data_sub = self.data_set[ixs,:]
+            data_sub = data_sub[(data_sub[:,0] <= self.data_set[ix,0] + 2000) & \
+                                (data_sub[:,0] >= self.data_set[ix,0] - 2000) & \
+                                (data_sub[:,1] <= self.data_set[ix,1] + 2000) & \
+                                (data_sub[:,1] >= self.data_set[ix,1] - 2000)]
+            distances = self.distance(self.data_set[ix, :], data_sub)
+            sorted_indices = np.argsort(distances)
+            kk = min(k, len(sorted_indices))
+            k_nearest = sorted_indices[range(kk)]
 
-        #back to full data
-        data_knn = data_sub[k_nearest]
-        knp = np.array([np.where(np.all(kn==self.data_set[ixs,:],axis=1))[0][0] for kn in data_knn])
-        return base_indices[knp]
+            #back to full data
+            data_knn = data_sub[k_nearest]
+            data_idx = np.array([np.where(np.all(kn==self.data_set[ixs,:],axis=1))[0][0] for kn in data_knn])
+            return base_indices[data_idx]
+
+        #calculate distances for entire data set // no points in range
+        except IndexError:
+            distances = self.distance(self.data_set[ix, :], self.data_set[ixs, :])
+            sorted_indices = np.argsort(distances)
+            kk = min(k, len(sorted_indices))
+            k_nearest = sorted_indices[range(kk)]
+            return base_indices[k_nearest]
 
     def calculate_headings(self, ix, ixs, ref_heading=0.0):
 

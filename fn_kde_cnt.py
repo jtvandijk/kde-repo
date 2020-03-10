@@ -27,7 +27,6 @@ def to_concave_points(df,coord):
         concave_array = concave.calculate()
         if not concave_array is None:
             contours.append(concave_array)
-
     #return contours list
     return contours
 
