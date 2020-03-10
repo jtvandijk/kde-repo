@@ -5,6 +5,6 @@
 /norm/*
 /rdata/*
 /web/*
-fn_query_*
-fn_write_*
+fn_query*
+fn_write*
 *.pyc

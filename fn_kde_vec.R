@@ -11,16 +11,16 @@ suppressMessages(library(raster))
 
 #parameters
 options(warn=-1)
-year <- as.numeric(commandArgs(trailingOnly=TRUE)[1])
 
 #-------------------------------------------------------------------------------
 # read from stdin
 #-------------------------------------------------------------------------------
 
 #surname data
-pop.sur  <- na.omit(fread('file:///dev/stdin',col.names=c('surname','id','x','y')))
+pop.sur  <- na.omit(fread('file:///dev/stdin',col.names=c('surname','id','x','y','year')))
 agg.sur <- pop.sur[,.(n=.N),by=.(id,x,y)]
 name.sur <- pop.sur$surname[1]
+year.sur <- pop.sur$year[1]
 
 #-------------------------------------------------------------------------------
 # read from disk
@@ -29,7 +29,7 @@ name.sur <- pop.sur$surname[1]
 #load xy grid (xy), isonymy classes (iso), population density surface (pop.rdf)
 load('data/xy.RData')
 load('data/iso.RData')
-load(paste0('data/ipop',year,'.RData'))
+load(paste0('data/ipop',year.sur,'.RData'))
 
 #-------------------------------------------------------------------------------
 # calculation surname KDE
@@ -117,4 +117,4 @@ out.idx <- paste0('',sur.kde$r,collapse=',')
 out.kde <- paste0('',sur.kde$c,collapse=',')
 
 #stdout
-cat(paste0(name.sur,';',year,';',num.sur,';',bwd.sur,';',out.idx,';',out.kde))
+cat(paste0(name.sur,';',year.sur,';',num.sur,';',bwd.sur,';',out.idx,';',out.kde))
